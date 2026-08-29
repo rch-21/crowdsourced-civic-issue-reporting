@@ -15,7 +15,7 @@ Crowdsourced Civic Issue Reporting and Resolution System — SIH 2025.
 ## Structure
 
 ```text
-apps/        deployable applications (web, api)
+apps/        deployable applications (citizen web, admin web, api)
 packages/    shared contracts and models
 services/    independent service boundaries
  database/   PostgreSQL/PostGIS infrastructure and migrations
@@ -29,6 +29,8 @@ config/      configuration guidance
 - `apps/admin/` — municipal administration dashboard
 - `apps/web/` — citizen and municipal web application
 - `apps/api/` — Fastify API and business services
+
+The citizen app supports report tracking, GPS-tagged problem photos, nearby-issue detection, and upvoting. The administration app supports acknowledgement, impact-based triage, resolution proof, citizen approval, and historical analysis.
 
 ## Local development
 

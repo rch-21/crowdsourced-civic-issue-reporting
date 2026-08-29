@@ -6,7 +6,7 @@
 - Node.js 24.x (the verified machine has Node v24.19.0)
 - npm 11.x (verified: 11.17.0)
 - Docker Desktop with the Linux engine running
-- Git is optional; this folder is not currently a Git repository
+- Git 2.x (recommended for version control)
 
 ## 2. Stack
 
@@ -37,7 +37,7 @@ No root `.env.example` is required by the current code. For direct API execution
 Docker Compose provides the database and PostGIS:
 
 ```powershell
-cd "C:\Users\dhara\OneDrive\Desktop\Civic Issue"
+cd "C:\Users\hp\OneDrive\Desktop\Civic Issue"
 npm run db:up
 ```
 
@@ -57,7 +57,7 @@ docker volume rm civic-issue-platform_civic_issue_pgdata
 npm run db:up
 ```
 
-There is no separate Redis, AI server, map server, object-storage service, or notification provider required by the current local implementation.
+There is no separate Redis, AI server, map server, or notification provider required by the current local implementation. Citizen problem photos are stored in the prototype database metadata; production should use object storage instead.
 
 ## 5. Install
 
@@ -89,6 +89,15 @@ npm run dev:web
 
 Open `http://localhost:5173`.
 
+In another PowerShell window, start the administration dashboard:
+
+```powershell
+cd "C:\Users\hp\OneDrive\Desktop\Civic Issue"
+npm run dev:admin
+```
+
+Open `http://localhost:5175`.
+
 Or start both:
 
 ```powershell
@@ -97,7 +106,7 @@ npm run dev
 
 ## 8. Demo accounts
 
-The inspected migrations do not contain seeded user accounts. Do not use real credentials. Registration is available through the API, but the current repository does not provide a verified role-seeding command for Citizen/Officer/Supervisor/Admin accounts. Therefore no demo credentials are claimed here.
+The migrations do not contain seeded user accounts. Do not use real credentials. For local role-based testing, run `node scripts/seed-dev-users.mjs` after starting the API; it prints temporary demo credentials and verifies each role. The administrator console accepts administrator and supervisor accounts only.
 
 ## 9. Verification commands
 
@@ -127,29 +136,16 @@ Invoke-RestMethod http://localhost:4000/api/v1/health
 
 A healthy configured database should produce a successful health response. The automated health test intentionally covers the database-unavailable condition too, so a 503 in that test is not itself a test failure.
 
-## 10. Current verification status
+## 10. Verification status
 
-On the connected Windows machine:
-
-- Node v24.19.0: PASS
-- npm 11.17.0: PASS
-- Docker CLI 29.7.2: PASS
-- Docker Compose v5.4.0: PASS
-- Automated tests: PASS (20 files, 85 tests)
-- API build: PASS
-- Web build: PASS
-- Database connection: BLOCKED because Docker Desktop Linux engine was not running
-- Live API health: BLOCKED by the same unavailable database
-- Browser/manual workflow: BLOCKED until database is started
-
-Cause of the database block: Docker CLI could not connect to `dockerDesktopLinuxEngine` because the Docker Desktop engine was not running. This was not a code defect and no project files were changed to work around it.
+Run the verification commands in section 9 after starting Docker and the API. The current application includes automated API tests, TypeScript checks, citizen/admin Vite applications, report clustering/upvoting, photo/GPS validation, notifications, resolution approval, and administrator History.
 
 ## Shortest startup sequence
 
 Start Docker Desktop and wait until its engine is running, then:
 
 ```powershell
-cd "C:\Users\dhara\OneDrive\Desktop\Civic Issue"
+cd "C:\Users\hp\OneDrive\Desktop\Civic Issue"
 npm install
 npm run db:up
 npm run dev
