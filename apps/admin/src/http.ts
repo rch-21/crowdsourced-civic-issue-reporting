@@ -14,6 +14,7 @@ export type QueueRow = {
   priority: string;
   affectedPopulation: number | null;
   slaDueAt: string | null;
+  supportingVotes?: number;
   latitude?: number | null;
   longitude?: number | null;
 };
@@ -39,10 +40,11 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   }
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
+    const errorCode = typeof body.error === 'string' ? body.error : body.error?.code;
     const message = response.status >= 500
       ? 'The administrative service is temporarily unavailable. Please try again shortly.'
-      : body.message ?? 'The administrative request could not be completed.';
-    throw new AdminApiError(response.status, message, body.error);
+      : body.message ?? body.error?.message ?? 'The administrative request could not be completed.';
+    throw new AdminApiError(response.status, message, errorCode);
   }
   return body as T;
 }
@@ -52,8 +54,10 @@ export function login(email: string, password: string) {
 }
 export function currentUser() { return api<{ user: User }>('/auth/me'); }
 export function queue() { return api<QueueRow[]>('/incidents/queue'); }
+export function history() { return api<QueueRow[]>('/incidents/history'); }
 export function publicDashboard() { return api<{ summary: Record<string, unknown>; wards: Record<string, unknown>[]; hotspots: Record<string, unknown>[] }>('/public/dashboard'); }
 export function incident(id: string) { return api<any>(`/incidents/${id}`); }
+export function acknowledge(id: string) { return api(`/incidents/${id}/acknowledge`, { method: 'POST' }); }
 export function verification(id: string) { return api<any>(`/incidents/${id}/verification`); }
 export function submitResolution(id: string, payload: { resolutionLatitude: number | null; resolutionLongitude: number | null; note?: string; media: Array<{ storageKey: string; mediaType: string; capturedAt: string; sha256: string; dataUrl: string }> }) {
   return api<any>(`/incidents/${id}/resolution-verification`, { method: 'POST', body: JSON.stringify(payload) });

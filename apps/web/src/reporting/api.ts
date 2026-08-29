@@ -17,6 +17,8 @@ export type ReportDetail = ReportSummary & {
   citizenId: string;
   comments?: { id: string; body: string; createdAt: string }[];
   feedback?: { rating: number; body: string | null; createdAt: string }[];
+  media?: { storageKey: string; mediaType: string; fileSize: number; metadata?: { dataUrl?: string } }[];
+  resolution?: { note: string | null; submittedAt: string; overallResult: string; confidence: number; evidence: unknown; media?: { storageKey: string; mediaType: string; capturedAt: string | null; metadata?: { dataUrl?: string | null } }[] } | null;
 };
 
 export function createReport(input: {
@@ -25,12 +27,15 @@ export function createReport(input: {
   latitude: number;
   longitude: number;
   address?: string;
+  media?: { storageKey: string; mediaType: string; fileSize: number; dataUrl: string }[];
 }) {
-  return api<{ id: string; incidentId: string; clustered?: boolean; clusterConfidence?: number }>('/reports', {
+  return api<{ id: string; incidentId: string; clustered?: boolean; clusterConfidence?: number; departmentCode?: string | null }>('/reports', {
     method: 'POST',
     body: JSON.stringify(input)
   });
 }
+export function nearbyIncidents(input: { categoryId: string; latitude: number; longitude: number; description?: string }) { return api<any[]>('/reports/nearby', { method: 'POST', body: JSON.stringify(input) }); }
+export function upvoteIncident(id: string) { return api<{ voted: boolean; alreadyVoted: boolean }>(`/incidents/${id}/upvote`, { method: 'POST' }); }
 
 export function myReports() {
   return api<ReportSummary[]>('/reports/mine');

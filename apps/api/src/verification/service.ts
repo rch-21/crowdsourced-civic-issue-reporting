@@ -26,7 +26,17 @@ export async function submitResolution(input:{incidentId:string;actorId:string;r
   for(const m of input.media)await db.query(`INSERT INTO resolution_submission_media(submission_id,storage_key,media_type,captured_at,sha256,metadata) VALUES($1,$2,$3,$4,$5,$6)`,[sub.id,m.storageKey,m.mediaType??null,m.capturedAt??null,m.sha256??null,JSON.stringify({mediaType:m.mediaType??null,valid:m.valid??true,dataUrl:m.dataUrl??null})]);
   const ver=(await db.query(`INSERT INTO resolution_verifications(submission_id,overall_result,confidence,algorithm_version,evidence) VALUES($1,$2,$3,$4,$5) RETURNING id`,[sub.id,result.overall,result.confidence,result.algorithmVersion,JSON.stringify({checks:result.checks})])).rows[0];
   for(const c of result.checks)await db.query(`INSERT INTO resolution_verification_checks(verification_id,check_type,result,confidence,evidence,algorithm_version) VALUES($1,$2,$3,$4,$5,$6)`,[ver.id,c.type,c.result,c.confidence,JSON.stringify(c.evidence),result.algorithmVersion]);
-  const next=result.overall==='PASS'?'resolved':result.overall==='FAIL'?'flagged':'pending_verification';await db.query(`UPDATE incidents SET status=$1,updated_at=now() WHERE id=$2`,[next,input.incidentId]);
+  const next=result.overall==='PASS'?'pending_verification':result.overall==='FAIL'?'flagged':'pending_verification';await db.query(`UPDATE incidents SET status=$1,updated_at=now() WHERE id=$2`,[next,input.incidentId]);
+  if (result.overall === 'PASS') {
+    const reports=(await db.query(`SELECT id,work_status,citizen_id FROM reports WHERE incident_id=$1`,[input.incidentId])).rows;
+    for (const report of reports) {
+      if (report.work_status !== 'CONFIRMED') {
+        await db.query(`UPDATE reports SET work_status='RESOLVED',updated_at=now() WHERE id=$1`,[report.id]);
+        await db.query(`INSERT INTO report_status_history(report_id,actor_user_id,from_status,to_status,note) VALUES($1,$2,$3,'RESOLVED',$4)`,[report.id,input.actorId,report.work_status,'Resolution proof submitted; awaiting citizen confirmation']);
+        if (report.citizen_id) await db.query(`INSERT INTO report_notifications (user_id,report_id,type,title,body) VALUES ($1,$2,'RESOLUTION_REVIEW','Resolution submitted for your review',$3)`,[report.citizen_id,report.id,input.note ? `The municipality reported this issue as resolved: ${input.note}` : 'The municipality submitted a resolution photo and marked this issue ready for your review. Please confirm whether the problem is resolved.']);
+      }
+    }
+  }
   await db.query(`INSERT INTO incident_history(incident_id,actor_user_id,event_type,details) VALUES($1,$2,'RESOLUTION_VERIFICATION',$3)`,[input.incidentId,input.actorId,JSON.stringify({verificationId:ver.id,overall:result.overall,confidence:result.confidence})]);await db.query('COMMIT');await calculateIncidentImpact(input.incidentId);return {submissionId:sub.id,verificationId:ver.id,...result};
  }catch(e){await db.query('ROLLBACK');throw e;}
 }

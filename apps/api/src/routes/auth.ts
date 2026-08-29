@@ -21,7 +21,9 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   app.post('/auth/login', async (request, reply) => {
-    const input = credentials.parse(request.body);
+    const parsed = credentials.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'INVALID_LOGIN_REQUEST', message: 'Enter a valid email and a password of at least 12 characters' });
+    const input = parsed.data;
     try { return reply.send(await login(input.email, input.password)); }
     catch (error: any) {
       if (error?.message === 'EMAIL_NOT_VERIFIED') return reply.code(403).send({ error: error.message, message: 'Verify your account before logging in' });

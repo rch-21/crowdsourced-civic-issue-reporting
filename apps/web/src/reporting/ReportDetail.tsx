@@ -18,7 +18,7 @@ export function ReportDetail({ id }: { id: string }) {
     report(id).then(setItem).catch(setError).finally(() => setLoading(false));
   }
 
-  useEffect(load, [id]);
+  useEffect(() => { load(); const timer = window.setInterval(load, 15000); return () => window.clearInterval(timer); }, [id]);
 
   async function reopen() {
     try {
@@ -67,6 +67,7 @@ export function ReportDetail({ id }: { id: string }) {
               <span className="status-pill">{item.workStatus}</span>
             </div>
             <p>{item.description}</p>
+            {item.media?.map((media) => media.metadata?.dataUrl && <img key={media.storageKey} src={media.metadata.dataUrl} alt="Photo of the reported civic problem" style={{ maxWidth: '100%', borderRadius: 10 }} />)}
             <dl className="review-list">
               <div><span>Report</span><strong>{item.id}</strong></div>
               <div><span>Incident</span><strong>{item.incidentId ?? 'Not clustered yet'}</strong></div>
@@ -77,6 +78,15 @@ export function ReportDetail({ id }: { id: string }) {
               {(item.workStatus === 'RESOLVED' || item.workStatus === 'CONFIRMED') && <button type="button" onClick={reopen}>Reopen report</button>}
               {item.workStatus === 'RESOLVED' && <button type="button" className="primary" onClick={confirm}>Confirm resolution</button>}
             </div>
+            {item.resolution && (
+              <article className="report-card resolution-card">
+                <p className="eyebrow">MUNICIPAL RESOLUTION RESPONSE</p>
+                <h3>{item.workStatus === 'CONFIRMED' ? 'Resolution confirmed' : 'Resolution awaiting your approval'}</h3>
+                <p>{item.resolution.note || 'The municipality has submitted evidence that this issue was repaired.'}</p>
+                {item.resolution.media?.map((media, index) => media.metadata?.dataUrl && <img key={media.storageKey || index} src={media.metadata.dataUrl} alt="Photo showing the resolved civic issue" style={{ maxWidth: '100%', borderRadius: 10 }} />)}
+                {item.workStatus === 'RESOLVED' && <p className="muted">Please review the photo and repair details. Confirm only if the problem has actually been resolved.</p>}
+              </article>
+            )}
             <h3>Comments</h3>
             {(item.comments ?? []).length === 0 && <p className="muted">No comments yet.</p>}
             {(item.comments ?? []).map((c) => (
