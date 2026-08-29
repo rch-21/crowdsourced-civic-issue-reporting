@@ -1,6 +1,6 @@
-# Civic Issue Platform
+# crowdsourced-civic-issue-reporting
 
-Phase 1 establishes the runnable technical foundation for the future civic platform.
+Crowdsourced Civic Issue Reporting and Resolution System — SIH 2025.
 
 ## Stack
 
@@ -24,6 +24,12 @@ config/      configuration guidance
  docs/       architecture and development documentation
 ```
 
-## Phase 1 scope
+## Applications
 
-Only foundation concerns are implemented: API versioning, health checks, database connectivity, logging, security middleware, error handling, validation configuration, frontend shell, shared types, environment separation, and tests.
+- `apps/admin/` — municipal administration dashboard
+- `apps/web/` — citizen and municipal web application
+- `apps/api/` — Fastify API and business services
+
+## Local development
+
+See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for setup, database, API, citizen app, and administration dashboard instructions.
