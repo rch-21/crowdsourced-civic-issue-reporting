@@ -1,0 +1,1 @@
+export const en={appTitle:'Civic Issue Platform',publicDashboard:'Public Civic Dashboard',reportIssue:'Report an issue',language:'Language',loading:'Loading…',error:'Something went wrong. Please try again.'};

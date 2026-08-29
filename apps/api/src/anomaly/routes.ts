@@ -1,0 +1,11 @@
+import type {FastifyInstance} from 'fastify';
+import {z} from 'zod';
+import {db} from '../lib/database.js';
+import {requireRole} from '../auth/middleware.js';
+import {DEFAULT_ANOMALY_CONFIG,detectPostResolutionAnomaly} from './service.js';
+const signal=z.object({reportId:z.string(),reportedAt:z.string(),categoryId:z.string(),distanceMeters:z.number(),reopened:z.boolean().optional(),imageSimilarity:z.number().min(0).max(1).optional()});
+export async function anomalyRoutes(app:FastifyInstance){
+ app.get('/post-resolution-anomalies',{preHandler:requireRole('supervisor','administrator')},async()=>{return (await db.query(`SELECT * FROM post_resolution_anomalies ORDER BY confidence DESC, detected_at DESC`)).rows;});
+ app.post('/incidents/:id/post-resolution-anomaly',{preHandler:requireRole('supervisor','administrator')},async(req:any,reply)=>{const body=z.object({resolvedAt:z.string().datetime(),signals:z.array(signal)}).parse(req.body);const result=detectPostResolutionAnomaly(body.signals,body.resolvedAt);if(!result)return {anomaly:null};const a=(await db.query(`INSERT INTO post_resolution_anomalies(resolved_incident_id,anomaly_type,confidence,evidence,algorithm_version,monitoring_until) VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,[req.params.id,result.type,result.confidence,JSON.stringify(result.evidence),'post-resolution-v1',new Date(Date.parse(body.resolvedAt)+DEFAULT_ANOMALY_CONFIG.monitoringDays*86400000)])).rows[0];for(const r of result.reports)await db.query(`INSERT INTO post_resolution_anomaly_reports(anomaly_id,report_id,relation,similarity,evidence) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,[a.id,r.reportId,r.reopened?'REOPENED':'RELATED',r.imageSimilarity??null,JSON.stringify({distanceMeters:r.distanceMeters,categoryId:r.categoryId})]);return reply.code(201).send({anomaly:a,signals:result});});
+ app.post('/post-resolution-anomalies/:id/review',{preHandler:requireRole('supervisor','administrator')},async(req:any)=>{const x=z.object({decision:z.enum(['DISMISS','REOPEN','CREATE_INCIDENT','LINK_INCIDENT','REQUEST_INSPECTION']),note:z.string().max(2000).optional()}).parse(req.body);await db.query(`INSERT INTO post_resolution_anomaly_reviews(anomaly_id,reviewer_user_id,decision,note) VALUES($1,$2,$3,$4)`,[req.params.id,req.user.id,x.decision,x.note??null]);return {reviewed:true,decision:x.decision};});
+}

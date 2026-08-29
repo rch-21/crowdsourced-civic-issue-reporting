@@ -1,0 +1,24 @@
+{
+  "name": "civic-issue-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Modular foundation for the Civic Issue platform",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @civic/api\" \"npm run dev -w @civic/web\"",
+    "dev:api": "npm run dev -w @civic/api",
+    "dev:web": "npm run dev -w @civic/web",
+    "dev:admin": "npm run dev -w @civic/admin",
+    "reset:admin-password": "node --import tsx/esm scripts/reset-admin-password.mjs",
+    "build": "npm run build --workspaces",
+    "test": "npm run test -w @civic/api",
+    "test:watch": "npm run test:watch -w @civic/api",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:up": "docker compose -f database/docker-compose.yml up -d",
+    "db:down": "docker compose -f database/docker-compose.yml down",
+    "db:logs": "docker compose -f database/docker-compose.yml logs -f"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

@@ -1,0 +1,2 @@
+import {db} from '../lib/database.js';
+export async function audit(action:string,actorUserId:string|null,entityType?:string,entityId?:string,details:Record<string,unknown>={},requestId?:string,ip?:string,userAgent?:string){await db.query(`INSERT INTO audit_log(actor_user_id,action,entity_type,entity_id,request_id,ip_address,user_agent,details) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,[actorUserId,action,entityType??null,entityId??null,requestId??null,ip??null,userAgent??null,details]);}
