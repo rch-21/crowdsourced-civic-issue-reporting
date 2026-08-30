@@ -1,8 +1,21 @@
 import type { FastifyInstance } from 'fastify';
+import { ZodError } from 'zod';
 
 export function registerErrorHandler(app: FastifyInstance) {
   app.setErrorHandler((error, request, reply) => {
     request.log.error({ err: error }, 'Unhandled request error');
+
+    if (error instanceof ZodError) {
+      return reply.status(400).send({
+        error: 'VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message
+        }))
+      });
+    }
+
     const statusCode = error instanceof Error && 'statusCode' in error
       ? Number((error as { statusCode?: number }).statusCode) || 500
       : 500;

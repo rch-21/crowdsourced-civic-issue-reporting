@@ -12,8 +12,24 @@ export function AuthScreen({ onLogin }: { onLogin: () => void }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setMessage('');
+
+    if (mode === 'register') {
+      if (name.trim().length < 2) {
+        setMessage('Full name must contain at least 2 characters.');
+        return;
+      }
+      if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+        setMessage('Enter a valid email address.');
+        return;
+      }
+      if (password.length < 12) {
+        setMessage('Password must be at least 12 characters.');
+        return;
+      }
+    }
+
+    setBusy(true);
     try {
       if (mode === 'login') {
         await login(email, password);

@@ -5,7 +5,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import { hashPassword } from '../apps/api/src/auth/security.ts';
 
 const { Pool } = pg;
-const email = 'administrator.demo@local.test';
+const email = 'administrator@gmail.com';
 const password = process.env.ADMIN_PASSWORD;
 
 async function readPassword() {
@@ -51,3 +51,4 @@ try {
   client.release();
   await pool.end();
 }
+
