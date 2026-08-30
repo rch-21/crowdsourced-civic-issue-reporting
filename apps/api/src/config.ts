@@ -8,7 +8,7 @@ const envSchema = z.object({
   BODY_LIMIT: z.coerce.number().int().positive().default(22_000_000),
   LOG_LEVEL: z.string().default('info'),
   DATABASE_URL: z.string().default('postgresql://civic:civic@localhost:55432/civic_issue'),
-  CORS_ORIGINS: z.string().default('http://localhost:5173,http://localhost:5175')
+  CORS_ORIGINS: z.string().default('http://localhost:5173,http://localhost:5175,https://web-kappa-livid-87sq6f6qdx.vercel.app,https://admin-gamma-roan-90.vercel.app')
 });
 
 export const config = envSchema.parse(process.env);
