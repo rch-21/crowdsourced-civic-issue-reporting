@@ -782,6 +782,54 @@ textarea:focus-visible {
   font-weight: 600;
 }
 
+.link-button {
+  border: 0;
+  background: none;
+  color: var(--brand-primary);
+  font-weight: 700;
+  padding: 4px 0;
+  min-height: auto;
+  text-decoration: underline;
+}
+
+.link-button:hover:not(:disabled) {
+  background: none;
+  transform: none;
+  box-shadow: none;
+  color: var(--brand-primary-hover);
+}
+
+.location-picker {
+  margin: 10px 0 16px;
+}
+
+.location-picker .civic-leaflet {
+  min-height: 260px;
+  border: 1px solid var(--line);
+}
+
+.location-picker .muted {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+.voice-recorder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 16px;
+  flex-wrap: wrap;
+}
+
+.voice-recorder audio {
+  height: 36px;
+}
+
+.voice-recorder .recording {
+  border-color: var(--danger);
+  background: var(--danger);
+}
+
 .review-list {
   display: grid;
   gap: 1px;

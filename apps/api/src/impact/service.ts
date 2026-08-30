@@ -1,6 +1,7 @@
 import { db } from '../lib/database.js';
 import { calculateImpact } from './scoring.js';
 import { estimatePopulation } from './population.js';
+import { recalculateSla } from '../sla/service.js';
 import type { ImpactFeatures, ImpactWeights } from './types.js';
 
 export async function getWeights():Promise<{weights:ImpactWeights;version:string}> {
@@ -17,6 +18,7 @@ export async function calculateIncidentImpact(incidentId:string) {
   const result=calculateImpact(features,weights,version);
   await db.query(`INSERT INTO incident_impact_scores(incident_id,score,priority,factors,confidence,calculation_version) VALUES($1,$2,$3,$4,$5,$6)`,[incidentId,result.score,result.priority,JSON.stringify({...result.factors,affectedPopulation:features.affectedPopulation,supportVolume:features.supportVolume}),result.confidence,result.version]);
   await db.query(`UPDATE incidents SET impact_score=$1,updated_at=now() WHERE id=$2`,[result.score,incidentId]);
+  await recalculateSla(incidentId).catch(()=>undefined);
   return result;
 }
 

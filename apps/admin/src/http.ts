@@ -14,10 +14,18 @@ export type QueueRow = {
   priority: string;
   affectedPopulation: number | null;
   slaDueAt: string | null;
+  slaBreachedAt?: string | null;
+  openEscalations?: number;
   supportingVotes?: number;
   latitude?: number | null;
   longitude?: number | null;
 };
+
+export type SlaPolicy = { priority: string; responseHours: number; resolutionHours: number; escalationHoursAfterBreach: number };
+export type AtRiskIncident = { incidentId: string; categoryName: string; status: string; dueAt: string; breachedAt: string | null; priority: string };
+export type Escalation = { id: string; incidentId: string; level: number; reason: string; status: string; triggeredAt: string; acknowledgedAt: string | null; notes: string | null };
+export type AbuseEvent = { id: string; userId: string | null; userDisplayName: string | null; eventType: string; fingerprint: string | null; details: Record<string, unknown>; createdAt: string };
+export type AbuseSummary = { byType: Array<{ eventType: string; count: number; last24h: number }>; flaggedUsers: Array<{ userId: string; userDisplayName: string | null; eventCount: number; lastEventAt: string }> };
 
 export class AdminApiError extends Error {
   constructor(public status: number, message: string, public code?: string) { super(message); }
@@ -63,3 +71,9 @@ export function submitResolution(id: string, payload: { resolutionLatitude: numb
   return api<any>(`/incidents/${id}/resolution-verification`, { method: 'POST', body: JSON.stringify(payload) });
 }
 export function updateStatus(id: string, status: string) { return api(`/incidents/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }); }
+export function slaPolicies() { return api<SlaPolicy[]>('/sla/policies'); }
+export function slaAtRisk() { return api<AtRiskIncident[]>('/sla/at-risk'); }
+export function slaEscalations(incidentId?: string) { return api<Escalation[]>(`/sla/escalations${incidentId ? `?incidentId=${incidentId}` : ''}`); }
+export function acknowledgeEscalation(id: string, notes?: string) { return api<{ id: string; status: string }>(`/sla/escalations/${id}/acknowledge`, { method: 'POST', body: JSON.stringify({ notes }) }); }
+export function abuseEvents(limit = 100) { return api<AbuseEvent[]>(`/abuse/events?limit=${limit}`); }
+export function abuseSummary() { return api<AbuseSummary>('/abuse/summary'); }

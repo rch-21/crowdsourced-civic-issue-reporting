@@ -3,8 +3,11 @@ import {randomUUID} from 'node:crypto';
 import {findCandidates} from '../clustering/service.js';
 import {calculateIncidentImpact} from '../impact/service.js';
 import {detectDepartmentCode} from './department-routing.js';
+import {evaluateReportForAbuse} from '../abuse/service.js';
 import type {ReportWorkStatus} from './types.js';
 export async function createReport(input:{citizenId:string;categoryId:string;description:string;latitude:number;longitude:number;address?:string;wardId?:string;departmentId?:string;media?:{storageKey:string;mediaType:string;fileSize:number;dataUrl:string}[]}){
+ const abuseCheck=await evaluateReportForAbuse(input.citizenId,input.description);
+ if(abuseCheck.blocked){const err:any=new Error('REPORT_REJECTED_ABUSE_PROTECTION');err.reason=abuseCheck.reason;throw err;}
  const id=randomUUID(),incidentId=randomUUID();await db.query('BEGIN');
  try{const category=(await db.query(`SELECT code,department_id FROM issue_categories WHERE id=$1`,[input.categoryId])).rows[0];const routedDepartment=category?.code==='OTHER_PROBLEM'?detectDepartmentCode(input.description):null;const departmentId=input.departmentId??(routedDepartment ? (await db.query(`SELECT id FROM departments WHERE code=$1`,[routedDepartment])).rows[0]?.id : category?.department_id)??null;
  await db.query(`INSERT INTO incidents(id,category_id,department_id,ward_id,location,status) VALUES($1,$2,$3,$4,ST_SetSRID(ST_MakePoint($5,$6),4326),'open')`,[incidentId,input.categoryId,departmentId,input.wardId??null,input.longitude,input.latitude]);

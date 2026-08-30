@@ -24,6 +24,7 @@ import { navFor } from './lib/nav';
 import { navigate, useRoute } from './lib/route';
 import { incidentQueue } from './incident/api';
 import { AnimatedNumber } from './ui/AnimatedNumber';
+import { useOfflineQueue } from './lib/useOfflineQueue';
 
 export function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -37,6 +38,7 @@ export function App() {
 
   const route = useRoute(user);
   const items = useMemo(() => (user ? navFor(user) : []), [user]);
+  const { online, queued, syncing, syncNow } = useOfflineQueue();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -75,6 +77,17 @@ export function App() {
           <small>Municipal civic intelligence</small>
         </div>
         <div className="header-actions">
+          {(!online || queued.length > 0) && user.role === 'citizen' && (
+            <button
+              type="button"
+              className={!online ? 'offline-chip offline' : 'offline-chip'}
+              disabled={!online || syncing}
+              onClick={syncNow}
+              title={!online ? 'You are offline' : `${queued.length} report(s) waiting to sync — tap to sync now`}
+            >
+              {!online ? '📴 Offline' : syncing ? '⏳ Syncing…' : `⏳ ${queued.length} pending`}
+            </button>
+          )}
           <button
             type="button"
             className="theme-toggle"

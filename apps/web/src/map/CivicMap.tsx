@@ -21,7 +21,7 @@ function LeafletMap({ points, onSelect }: { points: Point[]; onSelect: (point: P
   useEffect(() => {
     if (!host) return;
     const map = L.map(host, { scrollWheelZoom: true, zoomControl: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
     const markers = points.map((point) => {
       const marker = L.marker([point.latitude, point.longitude], { icon: markerIcon(point.priority) }).addTo(map);
       marker.bindTooltip(`${point.priority} · ${point.category}`, { direction: 'top' });

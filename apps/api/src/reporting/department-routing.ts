@@ -5,8 +5,14 @@ const RULES: Array<{ department: string; terms: string[] }> = [
   { department: 'LIGHTING', terms: ['light', 'lighting', 'lamp', 'streetlight', 'dark', 'electricity', 'electrical'] }
 ];
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function detectDepartmentCode(description: string): string | null {
   const text = description.toLowerCase();
-  const match = RULES.find((rule) => rule.terms.some((term) => text.includes(term)));
+  const match = RULES.find((rule) =>
+    rule.terms.some((term) => new RegExp(`\\b${escapeRegExp(term)}\\b`).test(text))
+  );
   return match?.department ?? null;
 }

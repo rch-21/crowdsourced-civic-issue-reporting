@@ -19,6 +19,8 @@ import { optimizationRoutes } from './optimization/routes.js';
 import { publicRoutes } from './public/routes.js';
 import { crossDepartmentRoutes } from './crossDepartment/routes.js';
 import { notificationRoutes } from './notifications/routes.js';
+import { slaRoutes } from './sla/routes.js';
+import { abuseRoutes } from './abuse/routes.js';
 import { registerSecurityHardening } from './security/hardening.js';
 
 export function buildApp() {
@@ -47,6 +49,8 @@ export function buildApp() {
     api.register(publicRoutes);
     api.register(crossDepartmentRoutes);
     api.register(notificationRoutes);
+    api.register(slaRoutes);
+    api.register(abuseRoutes);
   }, { prefix: '/api/v1' });
 
   return app;

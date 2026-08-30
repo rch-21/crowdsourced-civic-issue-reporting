@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { categories } from '../auth/api';
 import { createReport, nearbyIncidents, upvoteIncident } from './api';
+import { LocationPicker } from './LocationPicker';
+import { VoiceRecorder } from './VoiceRecorder';
+import { queueReport } from '../lib/offlineQueue';
+import { useOfflineQueue } from '../lib/useOfflineQueue';
 
 type NearbyIncident = { incidentId: string; categoryName: string; status: string; distanceMeters: number; supportingReports: number; supportingVotes: number; priority: string };
 
@@ -35,17 +39,29 @@ export function ReportForm({ onSubmitted }: { onSubmitted?: (id: string) => void
   const [photo, setPhoto] = useState<File | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
-  const [submitted, setSubmitted] = useState<{ id: string; incidentId: string; clustered?: boolean; departmentCode?: string | null } | null>(null);
+  const [submitted, setSubmitted] = useState<{ id: string; incidentId: string; clustered?: boolean; departmentCode?: string | null; offline?: boolean } | null>(null);
   const [nearby, setNearby] = useState<NearbyIncident[]>([]);
   const [checkingNearby, setCheckingNearby] = useState(false);
   const [votedIncident, setVotedIncident] = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const [locationSource, setLocationSource] = useState<'photo' | 'device' | 'manual' | null>(null);
+  const [voiceNote, setVoiceNote] = useState<{ blob: Blob; mimeType: string } | null>(null);
   const isOther = cats.find((c) => c.id === categoryId)?.code === 'OTHER_PROBLEM';
+  const { online, queued, syncing, syncNow } = useOfflineQueue();
 
   async function choosePhoto(file: File | null) {
     setPhoto(file); setMessage(''); if (!file || isOther) return;
     const gps = await photoGps(file);
-    if (!gps) { setLocation(null); setMessage('This photo has no embedded GPS location. Enable location tagging in your camera and choose the photo again.'); return; }
-    setLocation(gps);
+    if (!gps) {
+      setLocation(null); setLocationSource(null); setShowPicker(true);
+      setMessage('This photo has no embedded GPS location. Drag the pin on the map below to set the location manually, or choose a photo with location tagging enabled.');
+      return;
+    }
+    setLocation(gps); setLocationSource('photo');
+  }
+
+  function manualLocation(point: { latitude: number; longitude: number }) {
+    setLocation(point); setLocationSource('manual'); setMessage('');
   }
 
   useEffect(() => {
@@ -74,16 +90,22 @@ export function ReportForm({ onSubmitted }: { onSubmitted?: (id: string) => void
   function locate() {
     setMessage('');
     if (!navigator.geolocation) {
-      setMessage('Location services are unavailable on this device.');
+      setMessage('Location services are unavailable on this device. Drag the pin on the map below to set it manually.');
+      setShowPicker(true);
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (p) => {
         setLocation({ latitude: p.coords.latitude, longitude: p.coords.longitude });
+        setLocationSource('device');
         changeStep(Math.max(step, 4));
       },
-      () => setMessage('We could not access your location. You can try again.')
+      () => { setMessage('We could not access your location. Drag the pin on the map below to set it manually.'); setShowPicker(true); }
     );
+  }
+
+  async function blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('FILE_READ_FAILED')); reader.readAsDataURL(blob); });
   }
 
   async function submit(e: React.FormEvent) {
@@ -92,10 +114,36 @@ export function ReportForm({ onSubmitted }: { onSubmitted?: (id: string) => void
     setBusy(true);
     setMessage('');
     try {
-      const dataUrl = photo ? await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('FILE_READ_FAILED')); reader.readAsDataURL(photo); }) : undefined;
-      const result = await createReport({ categoryId, description, address, ...location, media: dataUrl ? [{ storageKey: `citizen-report/${Date.now()}-${photo!.name}`, mediaType: photo!.type, fileSize: photo!.size, dataUrl }] : [] });
-      setSubmitted(result);
-      onSubmitted?.(result.id);
+      const media: { storageKey: string; mediaType: string; fileSize: number; dataUrl: string }[] = [];
+      if (photo) {
+        const dataUrl = await blobToDataUrl(photo);
+        media.push({ storageKey: `citizen-report/${Date.now()}-${photo.name}`, mediaType: photo.type, fileSize: photo.size, dataUrl });
+      }
+      if (voiceNote) {
+        const dataUrl = await blobToDataUrl(voiceNote.blob);
+        const ext = voiceNote.mimeType.includes('mp4') ? 'm4a' : voiceNote.mimeType.includes('ogg') ? 'ogg' : 'webm';
+        media.push({ storageKey: `citizen-report/voice/${Date.now()}.${ext}`, mediaType: voiceNote.mimeType, fileSize: voiceNote.blob.size, dataUrl });
+      }
+      const reportPayload = { categoryId, description, address, ...location, media };
+      if (!navigator.onLine) {
+        const localId = await queueReport(reportPayload);
+        setSubmitted({ id: localId, incidentId: 'pending-sync', offline: true });
+        return;
+      }
+      try {
+        const result = await createReport(reportPayload);
+        setSubmitted(result);
+        onSubmitted?.(result.id);
+      } catch (err: unknown) {
+        if (err instanceof TypeError) {
+          // fetch throws a TypeError for network-level failures (offline, DNS, connection reset) —
+          // distinct from ApiError, which means the server was reached but rejected the request.
+          const localId = await queueReport(reportPayload);
+          setSubmitted({ id: localId, incidentId: 'pending-sync', offline: true });
+          return;
+        }
+        throw err;
+      }
     } catch (err: unknown) {
       setMessage(err instanceof Error ? err.message : 'We could not submit your report. Please try again.');
     } finally {
@@ -112,6 +160,34 @@ export function ReportForm({ onSubmitted }: { onSubmitted?: (id: string) => void
   }
 
   if (submitted) {
+    if (submitted.offline) {
+      return (
+        <section className="success-panel wizard-slide-right">
+          <p className="eyebrow">SAVED ON THIS DEVICE</p>
+          <h2>You're offline — this report will send automatically.</h2>
+          <p className="muted">Your report, photo, and voice note (if any) are saved on this device. It will be submitted as soon as you're back online — you don't need to do anything else.</p>
+          <dl className="review-list">
+            <div><span>Saved locally as</span><strong>{submitted.id}</strong></div>
+            <div><span>Status</span><strong>Pending sync</strong></div>
+          </dl>
+          <button
+            className="primary"
+            onClick={() => {
+              setSubmitted(null);
+              setDescription('');
+              setAddress('');
+              setLocation(null);
+              setPhoto(null);
+              setVoiceNote(null);
+              setDirection('right');
+              setStep(1);
+            }}
+          >
+            Report another issue
+          </button>
+        </section>
+      );
+    }
     return (
       <section className="success-panel wizard-slide-right">
         <p className="eyebrow">REPORT SUBMITTED</p>
@@ -132,6 +208,7 @@ export function ReportForm({ onSubmitted }: { onSubmitted?: (id: string) => void
             setAddress('');
             setLocation(null);
             setPhoto(null);
+            setVoiceNote(null);
             setDirection('right');
             setStep(1);
           }}
@@ -144,6 +221,17 @@ export function ReportForm({ onSubmitted }: { onSubmitted?: (id: string) => void
 
   return (
     <form onSubmit={submit} className="report-form">
+      {(!online || queued.length > 0) && (
+        <div className="notice offline-banner" role="status">
+          {!online && <span>You're offline. Reports you submit now will be saved on this device and sent automatically once you're back online.</span>}
+          {online && queued.length > 0 && (
+            <span>
+              {queued.length} report{queued.length === 1 ? '' : 's'} waiting to sync.{' '}
+              <button type="button" className="link-button" disabled={syncing} onClick={syncNow}>{syncing ? 'Syncing…' : 'Sync now'}</button>
+            </span>
+          )}
+        </div>
+      )}
       <div className="stepper">
         {['Issue', 'Evidence', 'Location', 'Details', 'Review'].map((label, i) => (
           <button
@@ -179,8 +267,10 @@ export function ReportForm({ onSubmitted }: { onSubmitted?: (id: string) => void
           <>
             <p className="eyebrow">STEP 3</p>
             <h2>Where is the issue?</h2>
-            {isOther ? <button type="button" onClick={locate}>{location ? 'Location captured' : 'Use my current location'}</button> : <p className="muted">Your report location will be read from the problem photo, not from your current device location.</p>}
-            {location && <div className="location-readout">{isOther ? 'Location captured' : `Photo location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}</div>}
+            {isOther ? <button type="button" onClick={locate}>{location ? 'Location captured' : 'Use my current location'}</button> : <p className="muted">Your report location is read from the problem photo in the next step. You can still set it manually here or correct it below.</p>}
+            {location && <div className="location-readout">{locationSource === 'manual' ? `Manually set: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}` : isOther ? 'Location captured' : `Photo location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}</div>}
+            <button type="button" onClick={() => setShowPicker((v) => !v)} className="link-button">{showPicker ? 'Hide map' : location ? 'Correct location on map' : 'Set location on map'}</button>
+            {showPicker && <LocationPicker latitude={location?.latitude ?? null} longitude={location?.longitude ?? null} onChange={manualLocation} />}
             {!isOther && <label>Address<input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Confirm a nearby address or landmark" /></label>}
           </>
         )}
@@ -193,7 +283,17 @@ export function ReportForm({ onSubmitted }: { onSubmitted?: (id: string) => void
               <textarea required minLength={5} maxLength={5000} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Explain what is happening and how it affects people." />
               <small>{description.length}/5000</small>
             </label>
-            {!isOther && <label>Problem photo<input type="file" accept="image/jpeg,image/jpg" capture="environment" required onChange={(e) => { void choosePhoto(e.target.files?.[0] ?? null); }} />{photo && <div className="file-preview">{photo.name} · {location ? `Photo GPS: ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}` : 'GPS not found'}</div>}<small>Use an original JPEG with location tagging enabled.</small></label>}
+            <VoiceRecorder
+              onRecordingChange={setVoiceNote}
+              onTranscript={(text) => setDescription((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text))}
+            />
+            {!isOther && <label>Problem photo<input type="file" accept="image/jpeg,image/jpg" capture="environment" required onChange={(e) => { void choosePhoto(e.target.files?.[0] ?? null); }} />{photo && <div className="file-preview">{photo.name} · {location ? `${locationSource === 'manual' ? 'Manually set' : 'Photo GPS'}: ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}` : 'GPS not found'}</div>}<small>Use an original JPEG with location tagging enabled, or set the location manually below.</small></label>}
+            {!isOther && photo && (
+              <>
+                <button type="button" onClick={() => setShowPicker((v) => !v)} className="link-button">{showPicker ? 'Hide map' : location ? 'Correct location on map' : 'Set location on map'}</button>
+                {showPicker && <LocationPicker latitude={location?.latitude ?? null} longitude={location?.longitude ?? null} onChange={manualLocation} />}
+              </>
+            )}
           </>
         )}
         {step === 5 && (
@@ -205,6 +305,7 @@ export function ReportForm({ onSubmitted }: { onSubmitted?: (id: string) => void
               <div><span>Location</span><strong>{location ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}` : 'Not captured'}</strong></div>
               <div><span>Address</span><strong>{address || 'Not provided'}</strong></div>
               {!isOther && <div><span>Evidence</span><strong>{photo?.name ?? 'None (not uploaded)'}</strong></div>}
+              <div><span>Voice note</span><strong>{voiceNote ? 'Attached' : 'None'}</strong></div>
               <div><span>Description</span><strong>{description}</strong></div>
             </div>
             <p className="muted">Submitting creates a real report. Nearby similar reports may be clustered into one civic incident.</p>
