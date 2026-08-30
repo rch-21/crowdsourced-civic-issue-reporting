@@ -1,1 +1,1 @@
-http://localhost:5173,http://localhost:5175,https://web-j04pivw5q-apex-deploy.vercel.app,https://admin-apex-deploy.vercel.app
+http://localhost:5173,http://localhost:5175,https://web-apex-deploy.vercel.app,https://admin-apex-deploy.vercel.app

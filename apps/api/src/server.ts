@@ -29,8 +29,21 @@ export function buildApp() {
   registerSecurityHardening(app);
 
   app.register(helmet);
-  const corsOrigins = [...new Set([...config.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean), 'https://web-kappa-livid-87sq6f6qdx.vercel.app', 'https://admin-gamma-roan-90.vercel.app'])];
-  app.register(cors, { origin: corsOrigins });
+  const explicitOrigins = new Set(config.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean));
+  // Vercel mints a brand-new hashed URL for every deployment of this project (e.g.
+  // https://web-<hash>-apex-deploy.vercel.app), so a static allow-list constantly goes
+  // stale. In addition to any explicit origins from CORS_ORIGINS, allow any deployment
+  // URL matching this project's own Vercel naming pattern for the web/admin apps.
+  const projectPreviewPattern = /^https:\/\/(web|admin)(-[a-z0-9]+)?-apex-deploy\.vercel\.app$/i;
+  app.register(cors, {
+    origin(origin, callback) {
+      if (!origin || explicitOrigins.has(origin) || projectPreviewPattern.test(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Not allowed by CORS'), false);
+    }
+  });
 
   app.register(async (api) => {
     api.register(healthRoutes);

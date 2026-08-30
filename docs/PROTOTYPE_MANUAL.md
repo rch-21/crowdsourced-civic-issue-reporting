@@ -16,7 +16,7 @@ The platform contains:
 
 Citizen Application:
 
-https://web-j04pivw5q-apex-deploy.vercel.app
+https://web-apex-deploy.vercel.app
 
 Admin Dashboard:
 
@@ -80,3 +80,5 @@ testuser123
 - Added database migrations and PostGIS support.
 - Added role-based accounts.
 - Improved API validation and error handling.
+- Corrected the Citizen Application link (the old hashed Vercel deployment URL was a stale, non-production link that resolved to Vercel's own login page, not the app).
+- Fixed a CORS misconfiguration on the API that was silently blocking every browser request from the Citizen Application in production.
