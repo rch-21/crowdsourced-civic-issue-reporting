@@ -29,7 +29,7 @@ export function buildApp() {
   registerSecurityHardening(app);
 
   app.register(helmet);
-  const corsOrigins = config.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean);
+  const corsOrigins = [...new Set([...config.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean), 'https://web-kappa-livid-87sq6f6qdx.vercel.app', 'https://admin-gamma-roan-90.vercel.app'])];
   app.register(cors, { origin: corsOrigins });
 
   app.register(async (api) => {
@@ -66,6 +66,7 @@ if (process.env.NODE_ENV !== 'test') {
       process.exit(1);
     });
 }
+
 
 
 
