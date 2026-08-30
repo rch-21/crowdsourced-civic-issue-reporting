@@ -2,44 +2,49 @@
 
 Crowdsourced Civic Issue Reporting and Resolution System — SIH 2025.
 
+## Overview
+
+A civic reporting platform where citizens can submit issues with location,
+photos, voice notes, and descriptions. Municipal administrators can review,
+prioritize, resolve, and analyse reported issues.
+
 ## Stack
 
 - Frontend: React 19 + Vite + TypeScript
 - Backend: Node.js 24 + Fastify 5 + TypeScript
-- Database: PostgreSQL 16 + PostGIS 3.4 via Docker
+- Database: PostgreSQL 16 + PostGIS 3.4
 - Validation: Zod
 - Logging: Fastify/Pino
 - Testing: Vitest
 - Monorepo: npm workspaces
 
-## Structure
-
-```text
-apps/        deployable applications (citizen web, admin web, api)
-packages/    shared contracts and models
-services/    independent service boundaries
- database/   PostgreSQL/PostGIS infrastructure and migrations
-config/      configuration guidance
- tests/      cross-application tests
- docs/       architecture and development documentation
-```
-
 ## Applications
 
+- `apps/web/` — citizen-facing application
 - `apps/admin/` — municipal administration dashboard
-- `apps/web/` — citizen and municipal web application
 - `apps/api/` — Fastify API and business services
-
-The citizen app supports report tracking, GPS-tagged problem photos, nearby-issue detection, and upvoting. The administration app supports acknowledgement, impact-based triage, resolution proof, citizen approval, and historical analysis.
 
 ## Local development
 
-See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for setup, database, API, citizen app, and administration dashboard instructions.
+Docker is recommended for local development because it provides the required database infrastructure.
+
+See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for developer setup instructions.
 
 
-## User Documentation
+## Production usage
 
-Guides for operating the system:
+End users do not need Docker. A deployed version is accessed through a web browser.
+
+Production deployments require:
+
+- hosted PostgreSQL/PostGIS database
+- deployed API service
+- deployed citizen web application
+- deployed administration dashboard
+
+For operators, configure production environment variables before starting services.
+
+## User documentation
 
 - [Citizen User Guide](docs/USER_GUIDE.md)
 - [Administrator Guide](docs/ADMIN_GUIDE.md)
