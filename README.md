@@ -35,3 +35,11 @@ The citizen app supports report tracking, GPS-tagged problem photos, nearby-issu
 ## Local development
 
 See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for setup, database, API, citizen app, and administration dashboard instructions.
+
+
+## User Documentation
+
+Guides for operating the system:
+
+- [Citizen User Guide](docs/USER_GUIDE.md)
+- [Administrator Guide](docs/ADMIN_GUIDE.md)
