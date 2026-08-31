@@ -17,7 +17,10 @@ export async function checkDatabase(): Promise<boolean> {
   try {
     await db.query('SELECT 1');
     return true;
-  } catch {
+  } catch (error) {
+    const err = error as { code?: string; message?: string; name?: string };
+    console.error('Database health check failed', { code: err.code, name: err.name, message: err.message });
     return false;
   }
 }
+
