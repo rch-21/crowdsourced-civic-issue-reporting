@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     rootDir: .
-    buildCommand: npm install --include=workspace-root && npm run build -w @civic/api
+    buildCommand: npm install --include=dev --include=workspace-root && npm run build -w @civic/api
     startCommand: npm run start -w @civic/api
     healthCheckPath: /api/v1/health
     autoDeploy: true
