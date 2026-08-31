@@ -8,6 +8,10 @@ test-results/
 *.log
 *.tsbuildinfo
 .DS_Store
+database-backups/
+scripts/tmp_*
+scripts/make_import_*
+scripts/split_import.ps1
 
 .vercel
 .env*
