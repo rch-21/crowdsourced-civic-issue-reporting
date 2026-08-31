@@ -5,9 +5,12 @@ const { Pool } = pg;
 
 export const db = new Pool({
   connectionString: config.DATABASE_URL,
+  // Supabase requires encrypted PostgreSQL connections. Keep SSL explicit so
+  // the API works consistently on Render even when the URI lacks sslmode.
+  ssl: { rejectUnauthorized: false },
   max: 10,
   idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 2_000
+  connectionTimeoutMillis: 5_000
 });
 
 export async function checkDatabase(): Promise<boolean> {
