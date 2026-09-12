@@ -54,7 +54,7 @@ For operators, configure production environment variables before starting servic
 For prototype testing, use the following administrator account:
 
 **Admin Dashboard:**
-https://admin-apex-deploy.vercel.app
+https://admin-gamma-roan-90.vercel.app
 
 Email:
 ```
@@ -68,7 +68,7 @@ administrator123
 
 Citizen users can register and login using any valid credentials from the user application:
 
-https://web-j04pivw5q-apex-deploy.vercel.app
+https://web-kappa-livid-87sq6f6qdx.vercel.app
 
 ## Prototype Testing Manual
 
