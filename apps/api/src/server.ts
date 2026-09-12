@@ -34,7 +34,7 @@ export function buildApp() {
   // https://web-<hash>-apex-deploy.vercel.app), so a static allow-list constantly goes
   // stale. In addition to any explicit origins from CORS_ORIGINS, allow any deployment
   // URL matching this project's own Vercel naming pattern for the web/admin apps.
-  const projectPreviewPattern = /^https:\/\/(web|admin)(-[a-z0-9]+)?-apex-deploy\.vercel\.app$/i;
+  const projectPreviewPattern = /^https:\/\/(web|admin)(?:-[a-z0-9]+)*-apex-deploy\.vercel\.app$/i;
   app.register(cors, {
     origin(origin, callback) {
       if (!origin || explicitOrigins.has(origin) || projectPreviewPattern.test(origin)) {
@@ -79,8 +79,3 @@ if (process.env.NODE_ENV !== 'test') {
       process.exit(1);
     });
 }
-
-
-
-
-
